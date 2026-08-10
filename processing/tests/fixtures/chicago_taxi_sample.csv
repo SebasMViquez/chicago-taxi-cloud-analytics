@@ -1,0 +1,5 @@
+Trip ID,Taxi ID,Trip Start Timestamp,Trip End Timestamp,Trip Seconds,Trip Miles,Pickup Community Area,Dropoff Community Area,Fare,Tips,Tolls,Extras,Trip Total,Payment Type,Company,Pickup Centroid Latitude,Pickup Centroid Longitude,Dropoff Centroid Latitude,Dropoff Centroid Longitude
+DEV-TRIP-001,DEV-TAXI-001,2023-01-03 08:15:00,2023-01-03 08:35:00,1200,4.5,32,8,14.25,2.00,0,1.00,17.25,Credit Card,Development Taxi Co,41.8781,-87.6298,41.8925,-87.6262
+DEV-TRIP-002,DEV-TAXI-002,2023-01-03 09:10:00,2023-01-03 09:20:00,600,1.8,8,32,8.50,0.00,0,0.50,9.00,Cash,Development Taxi Co,41.8925,-87.6262,41.8781,-87.6298
+DEV-TRIP-003,DEV-TAXI-003,2023-01-04 18:00:00,2023-01-04 18:00:00,0,0,32,33,0,0,0,0,0,Cash,Development Taxi Co,41.8781,-87.6298,41.8590,-87.6170
+

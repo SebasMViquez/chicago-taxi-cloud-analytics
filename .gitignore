@@ -1,0 +1,70 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+local.settings.json
+appsettings.*.json
+*.pfx
+*.pem
+*.key
+*.secrets.json
+
+# Data files
+data/
+datasets/
+raw/
+processed/
+results/
+*.csv
+*.csv.gz
+*.tsv
+*.jsonl
+*.parquet
+*.avro
+*.orc
+*.feather
+*.db
+*.sqlite
+!processing/tests/fixtures/*.csv
+
+# .NET
+bin/
+obj/
+TestResults/
+*.user
+*.suo
+*.rsuser
+.vs/
+
+# Node
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+build/
+*.egg-info/
+
+# Editors and OS
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# Azure tooling
+.azure/
+.azd/
+

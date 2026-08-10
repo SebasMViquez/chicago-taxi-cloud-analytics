@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=70"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chicago-taxi-processing"
+version = "0.1.0"
+description = "Local processing foundation for Chicago Taxi Trips analytics."
+requires-python = ">=3.13"
+dependencies = [
+  "polars",
+  "pyarrow"
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+  "ruff"
+]
+
+[project.scripts]
+chicago-taxi-process = "main:run"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+py-modules = ["main"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+

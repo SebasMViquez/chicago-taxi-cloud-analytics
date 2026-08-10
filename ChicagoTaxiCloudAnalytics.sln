@@ -1,0 +1,25 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChicagoTaxi.Api", "api\ChicagoTaxi.Api.csproj", "{7AA7C457-0487-4C4A-9F20-E66250616F96}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChicagoTaxi.Api.Tests", "api.Tests\ChicagoTaxi.Api.Tests.csproj", "{B4F4DF6E-1206-4FE7-A805-11C31F7AE747}"
+EndProject
+Global
+    GlobalSection(SolutionConfigurationPlatforms) = preSolution
+        Debug|Any CPU = Debug|Any CPU
+        Release|Any CPU = Release|Any CPU
+    EndGlobalSection
+    GlobalSection(ProjectConfigurationPlatforms) = postSolution
+        {7AA7C457-0487-4C4A-9F20-E66250616F96}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+        {7AA7C457-0487-4C4A-9F20-E66250616F96}.Debug|Any CPU.Build.0 = Debug|Any CPU
+        {7AA7C457-0487-4C4A-9F20-E66250616F96}.Release|Any CPU.ActiveCfg = Release|Any CPU
+        {7AA7C457-0487-4C4A-9F20-E66250616F96}.Release|Any CPU.Build.0 = Release|Any CPU
+        {B4F4DF6E-1206-4FE7-A805-11C31F7AE747}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+        {B4F4DF6E-1206-4FE7-A805-11C31F7AE747}.Debug|Any CPU.Build.0 = Debug|Any CPU
+        {B4F4DF6E-1206-4FE7-A805-11C31F7AE747}.Release|Any CPU.ActiveCfg = Release|Any CPU
+        {B4F4DF6E-1206-4FE7-A805-11C31F7AE747}.Release|Any CPU.Build.0 = Release|Any CPU
+    EndGlobalSection
+EndGlobal
+
