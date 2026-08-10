@@ -5,7 +5,6 @@ from ingestion.csv_reader import read_local_csv
 from main import process_file
 from transformations.trip_features import add_trip_features
 
-
 FIXTURE = Path(__file__).parent / "fixtures" / "chicago_taxi_sample.csv"
 
 
@@ -34,4 +33,3 @@ def test_process_file_writes_parquet(tmp_path: Path) -> None:
 
     assert output_path.exists()
     assert (tmp_path / "data_quality_summary.json").exists()
-
