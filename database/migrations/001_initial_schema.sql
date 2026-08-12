@@ -4,9 +4,14 @@ CREATE TABLE dbo.AnalyticsRuns
     SourceDatasetName NVARCHAR(128) NOT NULL,
     SourcePeriodStartDate DATE NULL,
     SourcePeriodEndDate DATE NULL,
+    SourceInputPath NVARCHAR(512) NULL,
+    SourceChecksum NVARCHAR(128) NULL,
     Status NVARCHAR(32) NOT NULL,
     StartedAtUtc DATETIME2(0) NOT NULL CONSTRAINT DF_AnalyticsRuns_StartedAtUtc DEFAULT SYSUTCDATETIME(),
     CompletedAtUtc DATETIME2(0) NULL,
+    TotalRows BIGINT NULL,
+    ValidRows BIGINT NULL,
+    InvalidRows BIGINT NULL,
     Notes NVARCHAR(1000) NULL
 );
 GO
@@ -97,10 +102,15 @@ CREATE TABLE dbo.DataQualityMetrics
     SourceRows BIGINT NOT NULL,
     AcceptedRows BIGINT NOT NULL,
     RejectedRows BIGINT NOT NULL,
+    DuplicateTripIds BIGINT NULL,
     NullRequiredFieldRows BIGINT NULL,
+    NullPickupAreas BIGINT NULL,
+    NullDropoffAreas BIGINT NULL,
+    ZeroDistanceTrips BIGINT NULL,
     InvalidDurationRows BIGINT NULL,
     InvalidDistanceRows BIGINT NULL,
     InvalidFareRows BIGINT NULL,
+    NegativeTotalRows BIGINT NULL,
     CreatedAtUtc DATETIME2(0) NOT NULL CONSTRAINT DF_DataQualityMetrics_CreatedAtUtc DEFAULT SYSUTCDATETIME(),
     CONSTRAINT FK_DataQualityMetrics_AnalyticsRuns FOREIGN KEY (AnalyticsRunId) REFERENCES dbo.AnalyticsRuns(AnalyticsRunId)
 );

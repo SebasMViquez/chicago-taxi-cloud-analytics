@@ -8,6 +8,10 @@ export async function getJson<TResponse>(path: string): Promise<TResponse> {
     throw new Error(`Request failed with status ${response.status}`);
   }
 
+  if (response.status === 204) {
+    return null as TResponse;
+  }
+
   return response.json() as Promise<TResponse>;
 }
 

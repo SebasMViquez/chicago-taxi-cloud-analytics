@@ -8,8 +8,11 @@ version = "0.1.0"
 description = "Local processing foundation for Chicago Taxi Trips analytics."
 requires-python = ">=3.13"
 dependencies = [
+  "azure-identity",
+  "azure-storage-file-datalake",
   "polars",
-  "pyarrow"
+  "pyarrow",
+  "pyodbc"
 ]
 
 [project.optional-dependencies]

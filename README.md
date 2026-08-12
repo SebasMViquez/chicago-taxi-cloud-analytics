@@ -82,7 +82,7 @@ cd processing
 pytest
 ```
 
-## Future Azure architecture
+## Azure architecture
 
 ```text
 Dataset
@@ -94,9 +94,9 @@ Dataset
   -> React / Azure Static Web Apps
 ```
 
-See `docs/architecture.md` for the Data Lake layout and layer responsibilities.
+See `docs/architecture.md` and `docs/azure-deployment.md` for the Data Lake layout, Azure setup, OIDC, GHCR, SQL access and deployment variables.
 
 ## Current status
 
-This repository is in phase 1. It contains a professional base architecture and a first vertical slice with development-only responses. It does not deploy Azure resources, process the real dataset, or present mock values as real analytics.
+The repository now contains the implementation foundation for the end-to-end flow. Azure resources, GitHub OIDC, SQL Entra users and the real Kaggle dataset still require external configuration before the cloud pipeline can run.
 

@@ -1,6 +1,9 @@
+from io import BytesIO
 from pathlib import Path
 
 import polars as pl
+
+from storage.adls import write_adls_file
 
 
 def write_parquet(frame: pl.DataFrame, path: Path) -> None:
@@ -8,10 +11,17 @@ def write_parquet(frame: pl.DataFrame, path: Path) -> None:
     frame.write_parquet(path)
 
 
-def write_azure_blob() -> None:
-    raise NotImplementedError("Azure Blob writes will be added when storage is provisioned.")
+def write_json(frame: pl.DataFrame, path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    frame.write_json(path)
 
 
-def load_azure_sql() -> None:
-    raise NotImplementedError("Azure SQL loading will be added after the analytical schema is approved.")
+def write_adls_parquet(frame: pl.DataFrame, file_system: str, path: str) -> None:
+    buffer = BytesIO()
+    frame.write_parquet(buffer)
+    write_adls_file(file_system, path, buffer.getvalue(), "application/octet-stream")
+
+
+def write_adls_json(frame: pl.DataFrame, file_system: str, path: str) -> None:
+    write_adls_file(file_system, path, frame.write_json(), "application/json")
 

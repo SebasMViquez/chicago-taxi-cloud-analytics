@@ -15,10 +15,10 @@ flowchart LR
 
 - Dataset: public Chicago Taxi Trips CSV from Kaggle. The full dataset is never committed to Git.
 - ADLS Raw: immutable source files organized by dataset and year.
-- Container Apps Job: Python + Polars + PyArrow processing workload.
-- ADLS Processed: cleaned and enriched Parquet partitioned for analytical processing.
-- ADLS Results: aggregate Parquet and data quality summaries.
-- Azure SQL: dashboard-ready aggregates only.
+- Container Apps Job: Python, Polars, PyArrow, Azure Identity and ODBC SQL writer.
+- ADLS Processed: cleaned and enriched Parquet.
+- ADLS Results: aggregate Parquet and data quality summary JSON.
+- Azure SQL: dashboard-ready aggregates keyed by `AnalyticsRunId`.
 - Azure Functions API: stable HTTP contracts for the frontend.
 - React / Static Web Apps: user interface; it never connects directly to Azure SQL.
 
@@ -26,26 +26,28 @@ flowchart LR
 
 ```text
 raw/
-└── chicago-taxi/
-    └── 2023/
-        └── taxi_trips.csv
+  chicago-taxi/
+    2023/
+      taxi_trips.csv
 
 processed/
-└── chicago-taxi/
-    └── year=2023/
-        └── month=01/
-            └── trips.parquet
+  chicago-taxi/
+    year=2023/
+      processed_trips.parquet
 
 results/
-├── demand_by_hour.parquet
-├── demand_by_area.parquet
-├── payment_summary.parquet
-├── monthly_trends.parquet
-├── cost_by_distance.parquet
-└── data_quality_summary.json
+  chicago-taxi/
+    latest/
+      dashboard_summary.parquet
+      demand_by_hour.parquet
+      demand_by_day.parquet
+      demand_by_area.parquet
+      payment_summary.parquet
+      monthly_trends.parquet
+      cost_by_distance.parquet
+      data_quality_summary.json
 ```
 
 ## Security posture
 
-The future Azure implementation should prefer Managed Identity and RBAC. Secrets, connection strings, storage keys, datasets, CSV exports and Parquet outputs must not be committed.
-
+The Azure implementation uses Managed Identity and RBAC for application workloads. Secrets, connection strings, storage keys, datasets, CSV exports and Parquet outputs must not be committed.

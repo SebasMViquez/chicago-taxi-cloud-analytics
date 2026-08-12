@@ -1,0 +1,118 @@
+name: cd
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  id-token: write
+  packages: write
+
+env:
+  RESOURCE_GROUP: rg-chicago-taxi-dev
+  LOCATION: eastus
+  PROCESSOR_IMAGE: ghcr.io/${{ github.repository }}/chicago-taxi-processing:${{ github.sha }}
+
+jobs:
+  build-processor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: processing
+          push: true
+          tags: |
+            ${{ env.PROCESSOR_IMAGE }}
+            ghcr.io/${{ github.repository }}/chicago-taxi-processing:latest
+
+  deploy-infra:
+    runs-on: ubuntu-latest
+    needs: build-processor
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - run: az group create --name "$RESOURCE_GROUP" --location "$LOCATION"
+      - run: >
+          az deployment group create
+          --resource-group "$RESOURCE_GROUP"
+          --template-file infra/bicep/main.bicep
+          --parameters
+          environmentName=dev
+          location="$LOCATION"
+          storageAccountName="${{ vars.AZURE_STORAGE_ACCOUNT_NAME }}"
+          sqlServerName="${{ vars.SQL_SERVER_NAME }}"
+          sqlDatabaseName="${{ vars.SQL_DATABASE_NAME }}"
+          sqlAdministratorLogin="${{ vars.SQL_ADMINISTRATOR_LOGIN }}"
+          sqlAdministratorPassword="${{ secrets.SQL_ADMINISTRATOR_PASSWORD }}"
+          developerIpAddress="${{ vars.DEVELOPER_PUBLIC_IP }}"
+          entraSqlAdministratorLogin="${{ vars.ENTRA_SQL_ADMINISTRATOR_LOGIN }}"
+          entraSqlAdministratorObjectId="${{ vars.ENTRA_SQL_ADMINISTRATOR_OBJECT_ID }}"
+          containerAppsEnvironmentName="${{ vars.CONTAINER_APPS_ENVIRONMENT_NAME }}"
+          processingJobName="${{ vars.PROCESSING_JOB_NAME }}"
+          processingImage="$PROCESSOR_IMAGE"
+          staticWebAppName="${{ vars.STATIC_WEB_APP_NAME }}"
+          functionAppName="${{ vars.FUNCTION_APP_NAME }}"
+          functionStorageAccountName="${{ vars.FUNCTION_STORAGE_ACCOUNT_NAME }}"
+          logAnalyticsWorkspaceName="${{ vars.LOG_ANALYTICS_WORKSPACE_NAME }}"
+          applicationInsightsName="${{ vars.APPLICATION_INSIGHTS_NAME }}"
+
+  deploy-api:
+    runs-on: ubuntu-latest
+    needs: deploy-infra
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet publish api/ChicagoTaxi.Api.csproj --configuration Release --output publish/api
+      - run: cd publish/api && zip -r ../api.zip .
+      - run: >
+          az functionapp deployment source config-zip
+          --resource-group "$RESOURCE_GROUP"
+          --name "${{ vars.FUNCTION_APP_NAME }}"
+          --src publish/api.zip
+
+  deploy-web:
+    runs-on: ubuntu-latest
+    needs: deploy-infra
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: npm ci
+      - run: npm run build
+        env:
+          VITE_API_BASE_URL: https://${{ vars.FUNCTION_APP_NAME }}.azurewebsites.net
+      - uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          app_location: apps/web
+          output_location: dist
+          skip_app_build: true
