@@ -2,6 +2,9 @@ name: ghcr-processor
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - Integraciones_CLOUD
 
 permissions:
   contents: read
