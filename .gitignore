@@ -68,3 +68,6 @@ Thumbs.db
 .azure/
 .azd/
 
+.env
+.env.local
+*.env
