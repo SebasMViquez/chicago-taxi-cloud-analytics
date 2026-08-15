@@ -11,7 +11,7 @@ permissions:
   packages: write
 
 env:
-  PROCESSOR_IMAGE: ghcr.io/${{ github.repository }}/chicago-taxi-processing:${{ github.sha }}
+  PROCESSOR_IMAGE: ghcr.io/sebasmviquez/chicago-taxi-cloud-analytics/chicago-taxi-processing:${{ github.sha }}
 
 jobs:
   build-and-push-processor:
@@ -33,4 +33,4 @@ jobs:
           push: true
           tags: |
             ${{ env.PROCESSOR_IMAGE }}
-            ghcr.io/${{ github.repository }}/chicago-taxi-processing:latest
+            ghcr.io/sebasmviquez/chicago-taxi-cloud-analytics/chicago-taxi-processing:latest
