@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import os
+import struct
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import polars as pl
 import pyodbc
+from azure.identity import DefaultAzureCredential
 
 
 @dataclass(frozen=True)
@@ -15,7 +17,7 @@ class SqlConfig:
     auth_mode: str = "ManagedIdentity"
 
     @classmethod
-    def from_environment(cls) -> "SqlConfig":
+    def from_environment(cls) -> SqlConfig:
         server = os.getenv("SQL_SERVER_NAME") or os.getenv("SQL_SERVER")
         database = os.getenv("SQL_DATABASE_NAME") or os.getenv("SQL_DATABASE")
         if not server or not database:
@@ -53,23 +55,19 @@ class AnalyticsSqlWriter:
                 WHERE AnalyticsRunId = ?
                 """,
                 "Completed",
-                datetime.now(timezone.utc).replace(tzinfo=None),
+                datetime.now(UTC).replace(tzinfo=None),
                 run_id,
             )
             connection.commit()
             return run_id
 
     def _connect(self) -> pyodbc.Connection:
-        authentication = (
-            "ActiveDirectoryMsi"
-            if self._config.auth_mode == "ManagedIdentity"
-            else "ActiveDirectoryDefault"
-        )
         host = (
             self._config.server
             if "." in self._config.server
             else f"{self._config.server}.database.windows.net"
         )
+
         connection_string = (
             "Driver={ODBC Driver 18 for SQL Server};"
             f"Server=tcp:{host},1433;"
@@ -77,8 +75,25 @@ class AnalyticsSqlWriter:
             "Encrypt=yes;"
             "TrustServerCertificate=no;"
             "Connection Timeout=30;"
-            f"Authentication={authentication};"
         )
+
+        if self._config.auth_mode == "ManagedIdentity":
+            token = DefaultAzureCredential().get_token(
+                "https://database.windows.net/.default"
+            ).token
+            token_bytes = token.encode("utf-16-le")
+            token_struct = struct.pack(
+                f"<I{len(token_bytes)}s",
+                len(token_bytes),
+                token_bytes,
+            )
+            sql_copt_ss_access_token = 1256
+            return pyodbc.connect(
+                connection_string,
+                attrs_before={sql_copt_ss_access_token: token_struct},
+            )
+
+        connection_string += "Authentication=ActiveDirectoryDefault;"
         return pyodbc.connect(connection_string)
 
     def _create_run(
