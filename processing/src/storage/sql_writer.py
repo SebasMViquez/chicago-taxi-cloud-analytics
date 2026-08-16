@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import math
 import struct
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -108,6 +109,16 @@ class AnalyticsSqlWriter:
         connection_string += "Authentication=ActiveDirectoryDefault;"
         return pyodbc.connect(connection_string)
 
+    def _sql_value(self, value):
+        if value is None:
+            return None
+
+        if isinstance(value, float):
+            if math.isnan(value) or math.isinf(value):
+                return None
+            return value
+
+        return value
     def _create_run(
         self,
         cursor: pyodbc.Cursor,
@@ -226,8 +237,8 @@ class AnalyticsSqlWriter:
                     run_id,
                     row["Pickup Community Area"],
                     row["trip_count"],
-                    row["average_fare"],
-                    row["average_trip_miles"],
+                    self._sql_value(row["average_fare"]),
+                    self._sql_value(row["average_trip_miles"]),
                 )
                 for row in frame.iter_rows(named=True)
             ],
@@ -251,9 +262,9 @@ class AnalyticsSqlWriter:
                     run_id,
                     row["distance_range_miles"],
                     row["trip_count"],
-                    row["average_fare"],
-                    row["average_trip_total"],
-                    row["average_duration_minutes"],
+                    self._sql_value(row["average_fare"]),
+                    self._sql_value(row["average_trip_total"]),
+                    self._sql_value(row["average_duration_minutes"]),
                 )
                 for row in frame.iter_rows(named=True)
             ],
@@ -276,8 +287,8 @@ class AnalyticsSqlWriter:
                     run_id,
                     row["Payment Type"],
                     row["trip_count"],
-                    row["total_amount"],
-                    row["average_tip_percentage"],
+                    self._sql_value(row["total_amount"]),
+                    self._sql_value(row["average_tip_percentage"]),
                 )
                 for row in frame.iter_rows(named=True)
             ],
@@ -301,8 +312,8 @@ class AnalyticsSqlWriter:
                     row["year"],
                     row["month"],
                     row["trip_count"],
-                    row["average_fare"],
-                    row["average_trip_miles"],
+                    self._sql_value(row["average_fare"]),
+                    self._sql_value(row["average_trip_miles"]),
                 )
                 for row in frame.iter_rows(named=True)
             ],
