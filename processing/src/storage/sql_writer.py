@@ -77,6 +77,18 @@ class AnalyticsSqlWriter:
             "Connection Timeout=30;"
         )
 
+        if self._config.auth_mode == "SqlPassword":
+            sql_user = os.getenv("SQL_USER") or os.getenv("SQL_USERNAME")
+            sql_password = os.getenv("SQL_PASSWORD")
+
+            if not sql_user or not sql_password:
+                raise RuntimeError(
+                    "SQL_USER and SQL_PASSWORD are required when SQL_AUTH_MODE=SqlPassword."
+                )
+
+            connection_string += f"UID={sql_user};PWD={sql_password};"
+            return pyodbc.connect(connection_string)
+
         if self._config.auth_mode == "ManagedIdentity":
             token = DefaultAzureCredential().get_token(
                 "https://database.windows.net/.default"
