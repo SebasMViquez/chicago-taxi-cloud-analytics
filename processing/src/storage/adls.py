@@ -28,6 +28,12 @@ def read_adls_file(file_system: str, path: str) -> bytes:
     return file_client.download_file().readall()
 
 
+def download_adls_file(file_system: str, path: str, destination: os.PathLike[str] | str) -> None:
+    file_client = _service_client().get_file_client(file_system=file_system, file_path=path)
+    with open(destination, "wb") as file:
+        file_client.download_file().readinto(file)
+
+
 def write_adls_file(file_system: str, path: str, content: bytes | str, content_type: str) -> None:
     data = content.encode("utf-8") if isinstance(content, str) else content
     file_system_client = _service_client().get_file_system_client(file_system)
@@ -38,6 +44,23 @@ def write_adls_file(file_system: str, path: str, content: bytes | str, content_t
         overwrite=True,
         content_settings=ContentSettings(content_type=content_type),
     )
+
+
+def write_adls_file_from_path(
+    file_system: str,
+    path: str,
+    source: os.PathLike[str] | str,
+    content_type: str,
+) -> None:
+    file_system_client = _service_client().get_file_system_client(file_system)
+    _ensure_parent_directories(file_system_client, path)
+    file_client = file_system_client.get_file_client(path)
+    with open(source, "rb") as file:
+        file_client.upload_data(
+            file,
+            overwrite=True,
+            content_settings=ContentSettings(content_type=content_type),
+        )
 
 
 def _ensure_parent_directories(file_system_client: FileSystemClient, path: str) -> None:

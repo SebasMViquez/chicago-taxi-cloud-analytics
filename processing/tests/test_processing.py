@@ -3,11 +3,11 @@ from pathlib import Path
 
 import polars as pl
 
+import main as processing_main
 from analytics.aggregations import all_aggregations
 from cleaning.quality import clean_trips
 from ingestion import csv_reader
 from ingestion.csv_reader import read_local_csv
-from main import process_file
 from transformations.trip_features import add_trip_features
 
 FIXTURE = Path(__file__).parent / "fixtures" / "chicago_taxi_sample.csv"
@@ -177,10 +177,38 @@ def test_read_adls_csv_parses_city_timestamp_format(
     write_trip_csv(csv_path, "01/31/2023 11:45:00 PM", "02/01/2023 12:15:00 AM")
     content = csv_path.read_bytes()
 
-    monkeypatch.setattr(csv_reader, "read_adls_file", lambda _file_system, _path: content)
+    def fake_download(_file_system: str, _path: str, destination: Path) -> None:
+        destination.write_bytes(content)
+
+    monkeypatch.setattr(csv_reader, "download_adls_file", fake_download)
 
     trips = csv_reader.read_adls_csv("chicago-taxi", "raw/sample.csv")
 
+    assert is_datetime_dtype(trips.schema["Trip Start Timestamp"])
+    assert is_datetime_dtype(trips.schema["Trip End Timestamp"])
+    assert trips.select(pl.col("Trip Start Timestamp").dt.hour()).item() == 23
+    assert trips.select(pl.col("Trip End Timestamp").dt.hour()).item() == 0
+
+
+def test_scan_adls_csv_downloads_to_file_and_parses_city_timestamp_format(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    csv_path = tmp_path / "city_timestamp_adls.csv"
+    local_path = tmp_path / "downloaded.csv"
+    write_trip_csv(csv_path, "01/31/2023 11:45:00 PM", "02/01/2023 12:15:00 AM")
+    content = csv_path.read_bytes()
+
+    def fake_download(_file_system: str, _path: str, destination: Path) -> None:
+        destination.write_bytes(content)
+
+    monkeypatch.setattr(csv_reader, "download_adls_file", fake_download)
+
+    trips = csv_reader.scan_adls_csv("chicago-taxi", "raw/sample.csv", local_path).collect(
+        engine="streaming"
+    )
+
+    assert local_path.exists()
     assert is_datetime_dtype(trips.schema["Trip Start Timestamp"])
     assert is_datetime_dtype(trips.schema["Trip End Timestamp"])
     assert trips.select(pl.col("Trip Start Timestamp").dt.hour()).item() == 23
@@ -213,12 +241,57 @@ def test_add_trip_features_adds_expected_columns() -> None:
 
 
 def test_process_file_writes_parquet(tmp_path: Path) -> None:
-    output_path = process_file(FIXTURE, tmp_path)
+    output_path = processing_main.process_file(FIXTURE, tmp_path)
 
     assert output_path.exists()
     assert (tmp_path / "results" / "data_quality_summary.json").exists()
     assert (tmp_path / "results" / "demand_by_hour.parquet").exists()
     assert (tmp_path / "results" / "payment_summary.parquet").exists()
+
+
+def test_process_adls_file_uploads_processed_parquet_from_local_file(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    uploaded_files = {}
+    uploaded_parquet = {}
+    uploaded_json = {}
+
+    def fake_scan_adls_csv(_file_system: str, _input_path: str, local_path: Path) -> pl.LazyFrame:
+        local_path.write_bytes(FIXTURE.read_bytes())
+        return csv_reader.scan_local_csv(local_path)
+
+    def fake_write_file_from_path(
+        _file_system: str,
+        path: str,
+        source: Path,
+        _content_type: str,
+    ) -> None:
+        uploaded_files[path] = Path(source).stat().st_size
+
+    def fake_write_adls_parquet(frame: pl.DataFrame, _file_system: str, path: str) -> None:
+        uploaded_parquet[path] = frame.shape
+
+    def fake_write_adls_json(frame: pl.DataFrame, _file_system: str, path: str) -> None:
+        uploaded_json[path] = frame.to_dicts()
+
+    monkeypatch.setattr(processing_main, "scan_adls_csv", fake_scan_adls_csv)
+    monkeypatch.setattr(processing_main, "write_adls_file_from_path", fake_write_file_from_path)
+    monkeypatch.setattr(processing_main, "write_adls_parquet", fake_write_adls_parquet)
+    monkeypatch.setattr(processing_main, "write_adls_json", fake_write_adls_json)
+
+    output_path = processing_main.process_adls_file(
+        file_system="chicago-taxi",
+        input_path="raw/sample.csv",
+        processed_path="processed/processed_trips.parquet",
+        results_prefix="results",
+    )
+
+    assert output_path == "processed/processed_trips.parquet"
+    assert uploaded_files["processed/processed_trips.parquet"] > 0
+    assert uploaded_json["results/data_quality_summary.json"][0]["source_rows"] == 3
+    assert uploaded_json["results/data_quality_summary.json"][0]["accepted_rows"] == 2
+    assert uploaded_parquet["results/demand_by_hour.parquet"][1] == 3
 
 
 def test_all_aggregations_returns_dashboard_ready_outputs() -> None:

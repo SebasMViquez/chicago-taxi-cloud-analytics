@@ -1,9 +1,11 @@
-from io import BytesIO
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import polars as pl
 
-from storage.adls import read_adls_file
+from storage.adls import download_adls_file
+
+Frame = pl.DataFrame | pl.LazyFrame
 
 CHICAGO_TAXI_SCHEMA = {
     "Trip ID": pl.String,
@@ -41,7 +43,7 @@ def _parse_timestamp(column: str) -> pl.Expr:
     ).alias(column)
 
 
-def _normalize_timestamps(trips: pl.DataFrame) -> pl.DataFrame:
+def _normalize_timestamps(trips: Frame) -> Frame:
     return trips.with_columns([_parse_timestamp(column) for column in TIMESTAMP_COLUMNS])
 
 
@@ -66,14 +68,19 @@ def _parse_monetary(column: str) -> pl.Expr:
     )
 
 
-def _normalize_numeric_columns(trips: pl.DataFrame) -> pl.DataFrame:
+def _normalize_numeric_columns(trips: Frame) -> Frame:
     return trips.with_columns(
         [_parse_trip_seconds(), *[_parse_monetary(column) for column in MONETARY_COLUMNS]]
     )
 
 
-def _normalize_trips(trips: pl.DataFrame) -> pl.DataFrame:
+def _normalize_trips(trips: Frame) -> Frame:
     return _normalize_numeric_columns(_normalize_timestamps(trips))
+
+
+def scan_local_csv(path: Path) -> pl.LazyFrame:
+    trips = pl.scan_csv(path, schema_overrides=CHICAGO_TAXI_SCHEMA, low_memory=True)
+    return _normalize_trips(trips)
 
 
 def read_local_csv(path: Path) -> pl.DataFrame:
@@ -82,7 +89,13 @@ def read_local_csv(path: Path) -> pl.DataFrame:
 
 
 def read_adls_csv(file_system: str, path: str) -> pl.DataFrame:
-    content = read_adls_file(file_system, path)
-    trips = pl.read_csv(BytesIO(content), schema_overrides=CHICAGO_TAXI_SCHEMA)
-    return _normalize_trips(trips)
+    with TemporaryDirectory() as temp_dir:
+        local_path = Path(temp_dir) / "input.csv"
+        download_adls_file(file_system, path, local_path)
+        return read_local_csv(local_path)
+
+
+def scan_adls_csv(file_system: str, path: str, local_path: Path) -> pl.LazyFrame:
+    download_adls_file(file_system, path, local_path)
+    return scan_local_csv(local_path)
 
