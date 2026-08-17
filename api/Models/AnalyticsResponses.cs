@@ -6,7 +6,7 @@ public sealed record DemandByHourPoint(
     long TripCount);
 
 public sealed record AreaAnalyticsPoint(
-    int PickupCommunityArea,
+    int? PickupCommunityArea,
     long TripCount,
     decimal? AverageFare,
     decimal? AverageTripMiles);

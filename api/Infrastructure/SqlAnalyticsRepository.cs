@@ -97,7 +97,7 @@ public sealed class SqlAnalyticsRepository(
             ORDER BY TripCount DESC;
             """,
             reader => new AreaAnalyticsPoint(
-                reader.GetInt32(0),
+                GetNullableInt32(reader, 0),
                 reader.GetInt64(1),
                 GetNullableDecimal(reader, 2),
                 GetNullableDecimal(reader, 3)),
@@ -292,4 +292,7 @@ public sealed class SqlAnalyticsRepository(
 
     private static long? GetNullableInt64(SqlDataReader reader, int ordinal) =>
         reader.IsDBNull(ordinal) ? null : reader.GetInt64(ordinal);
+
+    private static int? GetNullableInt32(SqlDataReader reader, int ordinal) =>
+        reader.IsDBNull(ordinal) ? null : reader.GetInt32(ordinal);
 }
