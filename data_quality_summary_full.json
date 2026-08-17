@@ -1,0 +1,1 @@
+[{"source_rows":3235079,"accepted_rows":2885777,"rejected_rows":349302,"duplicate_trip_ids":0,"null_required_field_rows":4589,"null_pickup_areas":151516,"null_dropoff_areas":309666,"zero_distance_trips":342436,"invalid_duration_rows":64384,"invalid_distance_rows":342436,"invalid_fare_rows":0,"negative_total_rows":0}]
