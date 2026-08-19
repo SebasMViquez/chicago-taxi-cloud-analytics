@@ -28,7 +28,8 @@ docs/                  Architecture documentation
 - .NET SDK 10.0.302
 - Node.js 24.10.0 and npm 11.6.1
 - Python 3.13 for the processor
-- Docker, Azure CLI, Bicep CLI and Azure Functions Core Tools are optional for this first phase
+- Azure Functions Core Tools v4 for running the API locally
+- Docker, Azure CLI and Bicep CLI are optional for this first phase
 
 PowerShell may block `npm.ps1`; use `npm.cmd`.
 
@@ -47,13 +48,16 @@ Open <http://localhost:5173/dashboard>.
 ```powershell
 dotnet restore
 dotnet build
-dotnet run --project api/ChicagoTaxi.Api.csproj
+cd api
+dotnet run
 ```
 
-Azure Functions Core Tools can also be used later if installed. The API currently exposes:
+The API currently exposes:
 
 - `GET /api/health`
 - `GET /api/dashboard/summary`
+
+For the Windows local backend runbook, including Azure Functions Core Tools setup and troubleshooting, see `docs/local-backend-setup.md`.
 
 ## Run processor
 
