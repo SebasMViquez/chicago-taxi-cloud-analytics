@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+apps/web/.env.local
 local.settings.json
 appsettings.*.json
 *.pfx
@@ -44,6 +45,8 @@ coverage/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+api/.local-*.log
+apps/web/.local-*.log
 
 # Python
 __pycache__/
@@ -68,3 +71,6 @@ Thumbs.db
 .azure/
 .azd/
 
+.env
+.env.local
+*.env

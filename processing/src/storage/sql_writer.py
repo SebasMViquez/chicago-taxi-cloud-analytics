@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import os
+import math
+import struct
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import polars as pl
 import pyodbc
+from azure.identity import DefaultAzureCredential
 
 
 @dataclass(frozen=True)
@@ -15,7 +18,7 @@ class SqlConfig:
     auth_mode: str = "ManagedIdentity"
 
     @classmethod
-    def from_environment(cls) -> "SqlConfig":
+    def from_environment(cls) -> SqlConfig:
         server = os.getenv("SQL_SERVER_NAME") or os.getenv("SQL_SERVER")
         database = os.getenv("SQL_DATABASE_NAME") or os.getenv("SQL_DATABASE")
         if not server or not database:
@@ -53,23 +56,19 @@ class AnalyticsSqlWriter:
                 WHERE AnalyticsRunId = ?
                 """,
                 "Completed",
-                datetime.now(timezone.utc).replace(tzinfo=None),
+                datetime.now(UTC).replace(tzinfo=None),
                 run_id,
             )
             connection.commit()
             return run_id
 
     def _connect(self) -> pyodbc.Connection:
-        authentication = (
-            "ActiveDirectoryMsi"
-            if self._config.auth_mode == "ManagedIdentity"
-            else "ActiveDirectoryDefault"
-        )
         host = (
             self._config.server
             if "." in self._config.server
             else f"{self._config.server}.database.windows.net"
         )
+
         connection_string = (
             "Driver={ODBC Driver 18 for SQL Server};"
             f"Server=tcp:{host},1433;"
@@ -77,10 +76,49 @@ class AnalyticsSqlWriter:
             "Encrypt=yes;"
             "TrustServerCertificate=no;"
             "Connection Timeout=30;"
-            f"Authentication={authentication};"
         )
+
+        if self._config.auth_mode == "SqlPassword":
+            sql_user = os.getenv("SQL_USER") or os.getenv("SQL_USERNAME")
+            sql_password = os.getenv("SQL_PASSWORD")
+
+            if not sql_user or not sql_password:
+                raise RuntimeError(
+                    "SQL_USER and SQL_PASSWORD are required when SQL_AUTH_MODE=SqlPassword."
+                )
+
+            connection_string += f"UID={sql_user};PWD={sql_password};"
+            return pyodbc.connect(connection_string)
+
+        if self._config.auth_mode == "ManagedIdentity":
+            token = DefaultAzureCredential().get_token(
+                "https://database.windows.net/.default"
+            ).token
+            token_bytes = token.encode("utf-16-le")
+            token_struct = struct.pack(
+                f"<I{len(token_bytes)}s",
+                len(token_bytes),
+                token_bytes,
+            )
+            sql_copt_ss_access_token = 1256
+            return pyodbc.connect(
+                connection_string,
+                attrs_before={sql_copt_ss_access_token: token_struct},
+            )
+
+        connection_string += "Authentication=ActiveDirectoryDefault;"
         return pyodbc.connect(connection_string)
 
+    def _sql_value(self, value):
+        if value is None:
+            return None
+
+        if isinstance(value, float):
+            if math.isnan(value) or math.isinf(value):
+                return None
+            return value
+
+        return value
     def _create_run(
         self,
         cursor: pyodbc.Cursor,
@@ -199,8 +237,8 @@ class AnalyticsSqlWriter:
                     run_id,
                     row["Pickup Community Area"],
                     row["trip_count"],
-                    row["average_fare"],
-                    row["average_trip_miles"],
+                    self._sql_value(row["average_fare"]),
+                    self._sql_value(row["average_trip_miles"]),
                 )
                 for row in frame.iter_rows(named=True)
             ],
@@ -224,9 +262,9 @@ class AnalyticsSqlWriter:
                     run_id,
                     row["distance_range_miles"],
                     row["trip_count"],
-                    row["average_fare"],
-                    row["average_trip_total"],
-                    row["average_duration_minutes"],
+                    self._sql_value(row["average_fare"]),
+                    self._sql_value(row["average_trip_total"]),
+                    self._sql_value(row["average_duration_minutes"]),
                 )
                 for row in frame.iter_rows(named=True)
             ],
@@ -249,8 +287,8 @@ class AnalyticsSqlWriter:
                     run_id,
                     row["Payment Type"],
                     row["trip_count"],
-                    row["total_amount"],
-                    row["average_tip_percentage"],
+                    self._sql_value(row["total_amount"]),
+                    self._sql_value(row["average_tip_percentage"]),
                 )
                 for row in frame.iter_rows(named=True)
             ],
@@ -274,8 +312,8 @@ class AnalyticsSqlWriter:
                     row["year"],
                     row["month"],
                     row["trip_count"],
-                    row["average_fare"],
-                    row["average_trip_miles"],
+                    self._sql_value(row["average_fare"]),
+                    self._sql_value(row["average_trip_miles"]),
                 )
                 for row in frame.iter_rows(named=True)
             ],

@@ -8,3 +8,6 @@ tests/
 *.csv
 *.json
 .local-output/
+.env
+.env.*
+*.env

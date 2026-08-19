@@ -16,7 +16,7 @@ export type DemandByHourPoint = {
 };
 
 export type AreaAnalyticsPoint = {
-  pickupCommunityArea: number;
+  pickupCommunityArea: number | null;
   tripCount: number;
   averageFare: number | null;
   averageTripMiles: number | null;
